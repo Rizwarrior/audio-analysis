@@ -134,7 +134,8 @@ function App() {
     // Clean up separation session if it exists
     if (separationData?.session_id) {
       try {
-        await fetch(`/api/cleanup/${separationData.session_id}`, {
+        const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+        await fetch(`${baseUrl}/api/cleanup/${separationData.session_id}`, {
           method: 'POST'
         })
       } catch (error) {

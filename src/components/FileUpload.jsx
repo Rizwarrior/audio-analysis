@@ -62,7 +62,8 @@ function FileUpload({ onAnalysisStart, onAnalysisComplete, isAnalyzing, resetTri
     formData.append('audio', selectedFile)
 
     try {
-      const response = await axios.post('/api/analyze', formData, {
+      const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+      const response = await axios.post(`${baseUrl}/api/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
