@@ -22,6 +22,12 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
     other: false
   })
   const [isDragging, setIsDragging] = useState(false)
+  const [loadingStates, setLoadingStates] = useState({
+    vocals: true,
+    drums: true,
+    bass: true,
+    other: true
+  })
 
   const audioRefs = useRef({})
   const progressRef = useRef(null)
@@ -366,7 +372,12 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
 
       <div className="main-controls">
         <div className="playback-controls">
-          <button onClick={togglePlayPause} className="play-button">
+          <button 
+            onClick={togglePlayPause} 
+            className="play-button"
+            disabled={Object.values(loadingStates).every(loading => loading)}
+            title={Object.values(loadingStates).every(loading => loading) ? "Loading tracks..." : ""}
+          >
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>
           <button onClick={restartSong} className="restart-button" title="Restart song">
@@ -406,6 +417,26 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
               ref={el => audioRefs.current[trackType] = el}
               src={trackUrl}
               preload="auto"
+              crossOrigin="anonymous"
+              onCanPlay={() => {
+                console.log(`${trackType} can start playing`);
+                setLoadingStates(prev => ({ ...prev, [trackType]: false }));
+              }}
+              onCanPlayThrough={() => console.log(`${trackType} fully loaded`)}
+              onLoadStart={() => {
+                console.log(`${trackType} started loading`);
+                setLoadingStates(prev => ({ ...prev, [trackType]: true }));
+              }}
+              onProgress={(e) => {
+                if (e.target.buffered.length > 0) {
+                  const buffered = e.target.buffered.end(0) / e.target.duration * 100;
+                  console.log(`${trackType} buffered: ${buffered.toFixed(1)}%`);
+                }
+              }}
+              onError={() => {
+                console.error(`${trackType} failed to load`);
+                setLoadingStates(prev => ({ ...prev, [trackType]: false }));
+              }}
             />
 
             <div className="track-header">
@@ -413,6 +444,9 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
                 <span className="track-icon">{trackInfo[trackType].icon}</span>
                 <h3 style={{ color: trackInfo[trackType].color }}>
                   {trackInfo[trackType].name}
+                  {loadingStates[trackType] && (
+                    <span className="loading-badge">⏳ Loading...</span>
+                  )}
                   {trackType === 'drums' && drumsAnalyzed && (
                     <span className="analyzed-badge">✓ Analyzed</span>
                   )}
