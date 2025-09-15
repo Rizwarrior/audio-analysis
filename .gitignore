@@ -146,3 +146,24 @@ output/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Accidentally added files to ignore
+*.ipynb
+test_*.py
+Dockerfile.*
+docker-compose.yml
+nginx.conf
+setup*.sh
+setup*.bat
+dev*.sh
+dev*.bat
+start*.sh
+start*.bat
+cleanup_ports.*
+install_*.sh
+fix_*.sh
+download_*.sh
+*.md
+!README.frontend.md
+!vercel.json
+hugging-face*/
