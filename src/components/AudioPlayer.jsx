@@ -3,6 +3,9 @@ import { Play, Pause, Download, Volume2, VolumeX, RotateCcw, Repeat } from 'luci
 import './AudioPlayer.css'
 
 function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed = false }) {
+  // Log the tracks URLs for debugging
+  console.log('AudioPlayer received tracks:', tracks)
+  
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -42,8 +45,10 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
         const audio = audioRefs.current[trackType]
         if (audio) {
           const handleLoadedMetadata = () => {
-            if (audioRefs.current[trackType] && trackType === primaryTrack) {
-              setDuration(audioRefs.current[trackType].duration)
+            const currentAudio = audioRefs.current[trackType]
+            if (currentAudio && trackType === primaryTrack) {
+              console.log(`${trackType} metadata loaded, duration: ${currentAudio.duration}`)
+              setDuration(currentAudio.duration)
             }
           }
 
@@ -66,6 +71,9 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
 
           const handleError = (e) => {
             console.error(`Audio error for ${trackType}:`, e)
+            console.error(`Audio src: ${audio.src}`)
+            console.error(`Audio readyState: ${audio.readyState}`)
+            console.error(`Audio networkState: ${audio.networkState}`)
           }
 
           const handleEnded = () => {
@@ -98,11 +106,21 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
 
           // If metadata is already loaded, set duration immediately
           if (audio.duration && !isNaN(audio.duration) && trackType === primaryTrack) {
+            console.log(`${trackType} duration already available: ${audio.duration}`)
             setDuration(audio.duration)
           }
           
           // Set initial volume for each track
           audio.volume = mutedTracks[trackType] ? 0 : volumes[trackType]
+          
+          // Log audio element status
+          console.log(`${trackType} audio setup:`, {
+            src: audio.src,
+            readyState: audio.readyState,
+            networkState: audio.networkState,
+            duration: audio.duration,
+            volume: audio.volume
+          })
         }
       })
     }
