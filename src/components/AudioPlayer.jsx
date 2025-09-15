@@ -40,15 +40,26 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
     const setupAudio = () => {
       const trackTypes = Object.keys(tracks)
       const primaryTrack = trackTypes[0] // Use first track as primary for time sync
+      
+      console.log('Setting up audio for tracks:', trackTypes)
+      console.log('Primary track:', primaryTrack)
 
       trackTypes.forEach(trackType => {
         const audio = audioRefs.current[trackType]
         if (audio) {
           const handleLoadedMetadata = () => {
             const currentAudio = audioRefs.current[trackType]
-            if (currentAudio && trackType === primaryTrack) {
+            if (currentAudio) {
               console.log(`${trackType} metadata loaded, duration: ${currentAudio.duration}`)
-              setDuration(currentAudio.duration)
+              
+              // Force volume refresh after metadata loads
+              const targetVolume = mutedTracks[trackType] ? 0 : volumes[trackType]
+              currentAudio.volume = targetVolume
+              console.log(`${trackType} volume refreshed to: ${targetVolume}`)
+              
+              if (trackType === primaryTrack) {
+                setDuration(currentAudio.duration)
+              }
             }
           }
 
@@ -111,7 +122,9 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
           }
           
           // Set initial volume for each track
-          audio.volume = mutedTracks[trackType] ? 0 : volumes[trackType]
+          const targetVolume = mutedTracks[trackType] ? 0 : volumes[trackType]
+          audio.volume = targetVolume
+          console.log(`${trackType} volume set to: ${targetVolume} (muted: ${mutedTracks[trackType]})`)
           
           // Log audio element status
           console.log(`${trackType} audio setup:`, {
@@ -147,7 +160,7 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
         }
       })
     }
-  }, [tracks])
+  }, [tracks, volumes, mutedTracks])
 
   const togglePlayPause = async () => {
     const newIsPlaying = !isPlaying
@@ -155,6 +168,13 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
 
     // Get all valid audio elements that are ready
     const audioElements = Object.values(audioRefs.current).filter(audio => audio && audio.readyState >= 2)
+    
+    console.log('Toggle play/pause:', newIsPlaying)
+    console.log('Ready audio elements:', audioElements.length)
+    audioElements.forEach((audio, index) => {
+      const trackType = Object.keys(audioRefs.current).find(key => audioRefs.current[key] === audio)
+      console.log(`${trackType}: volume=${audio.volume}, readyState=${audio.readyState}, currentTime=${audio.currentTime}`)
+    })
 
     if (newIsPlaying) {
       // Synchronize all tracks to the same time before playing
