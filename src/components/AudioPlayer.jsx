@@ -49,17 +49,18 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
 
           const handleTimeUpdate = () => {
             // Only update time from the primary track and throttle updates
-            if (audioRefs.current[trackType] && trackType === primaryTrack) {
+            // Don't update time while user is dragging the slider
+            if (audioRefs.current[trackType] && trackType === primaryTrack && !isDragging) {
               if (timeUpdateThrottle) {
                 clearTimeout(timeUpdateThrottle)
               }
 
               timeUpdateThrottle = setTimeout(() => {
                 const currentAudio = audioRefs.current[trackType]
-                if (currentAudio && !isNaN(currentAudio.currentTime)) {
+                if (currentAudio && !isNaN(currentAudio.currentTime) && !isDragging) {
                   setCurrentTime(currentAudio.currentTime)
                 }
-              }, 50) // Throttle to 20fps
+              }, 100) // Slightly slower throttle for smoother seeking
             }
           }
 
@@ -99,6 +100,9 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
           if (audio.duration && !isNaN(audio.duration) && trackType === primaryTrack) {
             setDuration(audio.duration)
           }
+          
+          // Set initial volume for each track
+          audio.volume = mutedTracks[trackType] ? 0 : volumes[trackType]
         }
       })
     }
@@ -242,28 +246,31 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
   const handleProgressClick = (e) => {
     if (!isDragging) {
       const newTime = getTimeFromPosition(e.clientX)
-
-      // Prevent the click if we're already very close to that time
-      if (Math.abs(currentTime - newTime) > 0.5) {
-        seekToTime(newTime)
-      }
+      seekToTime(newTime)
     }
   }
 
   const handleProgressMouseDown = (e) => {
+    e.preventDefault() // Prevent text selection during drag
     setIsDragging(true)
-    const newTime = getTimeFromPosition(e.clientX)
-    setCurrentTime(newTime) // Update UI immediately
+    const startTime = getTimeFromPosition(e.clientX)
+    setCurrentTime(startTime) // Update UI immediately
 
     const handleMouseMove = (moveEvent) => {
-      const newTime = getTimeFromPosition(moveEvent.clientX)
-      setCurrentTime(newTime) // Update UI during drag
+      if (moveEvent.buttons === 1) { // Only if left mouse button is still pressed
+        const newTime = getTimeFromPosition(moveEvent.clientX)
+        setCurrentTime(newTime) // Update UI during drag
+      }
     }
 
     const handleMouseUp = (upEvent) => {
       setIsDragging(false)
       const finalTime = getTimeFromPosition(upEvent.clientX)
-      seekToTime(finalTime) // Actually seek when drag ends
+      
+      // Small delay to prevent conflicts with time updates
+      setTimeout(() => {
+        seekToTime(finalTime)
+      }, 10)
 
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
@@ -360,7 +367,7 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
             <audio
               ref={el => audioRefs.current[trackType] = el}
               src={trackUrl}
-              preload="metadata"
+              preload="auto"
             />
 
             <div className="track-header">

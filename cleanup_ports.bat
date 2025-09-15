@@ -1,0 +1,23 @@
+@echo off
+echo Cleaning up ports...
+
+echo Killing processes on port 3000...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000') do taskkill /PID %%a /F 2>nul
+
+echo Killing processes on port 3001...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001') do taskkill /PID %%a /F 2>nul
+
+echo Killing processes on port 3002...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3002') do taskkill /PID %%a /F 2>nul
+
+echo Killing processes on port 3003...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3003') do taskkill /PID %%a /F 2>nul
+
+echo Killing processes on port 3004...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3004') do taskkill /PID %%a /F 2>nul
+
+echo Killing processes on port 8000...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8000') do taskkill /PID %%a /F 2>nul
+
+echo Cleanup complete!
+pause

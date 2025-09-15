@@ -1,0 +1,45 @@
+FROM python:3.8.10-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    curl \
+    build-essential \
+    libsndfile1-dev \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Install the known-good combo for Magenta onsets/frames
+RUN pip install --no-cache-dir \
+    tensorflow==2.11.1 \
+    tensorflow-estimator==2.11.0 \
+    tensorboard==2.11.2 \
+    keras==2.11.0 \
+    protobuf==3.19.6 \
+    tensorflow-probability==0.19.0 \
+    tf_slim==1.1.0 \
+    note-seq==0.0.3
+
+# Install other dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Clone Magenta repository for the onsets_frames_transcription code
+RUN git clone https://github.com/magenta/magenta.git /app/magenta
+
+# Set environment variables
+ENV PYTHONPATH="/app/magenta:$PYTHONPATH"
+
+# Create directories for models and data
+RUN mkdir -p /app/models /app/audio_samples /app/output
+
+# Copy backend code
+COPY backend/ /app/
+
+EXPOSE 8000
+
+CMD ["python", "main.py"]
