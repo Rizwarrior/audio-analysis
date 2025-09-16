@@ -114,7 +114,7 @@ function App() {
     
     // Update progress to show separation is done
     setProgress(60) // Separation is typically 60% of the work
-    setProgressText('Audio separated! Preloading tracks and analyzing drums...')
+    setProgressText('Tracks are preloading while analyzing drums...')
     setCurrentPhase('analysis')
   }
 
