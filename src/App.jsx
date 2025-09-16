@@ -90,18 +90,31 @@ function App() {
   }
 
   const handleSeparationComplete = (separationData) => {
-    console.log('Separation complete, starting audio preload:', separationData)
+    console.log('Separation complete, preloading audio tracks:', separationData)
     
-    // Immediately show separated tracks and start preloading
-    setSeparationData({
+    // Store separation data but DON'T show the player yet
+    // Just start preloading the audio tracks in the background
+    const tempSeparationData = {
       tracks: separationData.tracks,
       session_id: separationData.session_id,
       available_stems: separationData.available_stems
+    }
+    
+    // Create hidden audio elements to start preloading
+    Object.entries(separationData.tracks).forEach(([trackType, trackUrl]) => {
+      const audio = new Audio()
+      audio.preload = 'auto'
+      audio.src = trackUrl
+      audio.load() // Start loading immediately
+      console.log(`Preloading ${trackType} track: ${trackUrl}`)
     })
+    
+    // Store for later use but don't display yet
+    window.pendingSeparationData = tempSeparationData
     
     // Update progress to show separation is done
     setProgress(60) // Separation is typically 60% of the work
-    setProgressText('Separation complete! Starting audio preload and drum analysis...')
+    setProgressText('Audio separated! Preloading tracks and analyzing drums...')
     setCurrentPhase('analysis')
   }
 
@@ -133,18 +146,23 @@ function App() {
         
         // Show results after a brief pause
         setTimeout(() => {
-          // If separation data isn't already set, set it from combined data
-          if (data.separation && !separationData) {
-            setSeparationData({
-              tracks: data.separation.tracks,
-              session_id: data.separation.session_id,
-              available_stems: data.separation.available_stems
-            })
+          // Use pending separation data (which has been preloading) or fallback to combined data
+          const finalSeparationData = window.pendingSeparationData || (data.separation ? {
+            tracks: data.separation.tracks,
+            session_id: data.separation.session_id,
+            available_stems: data.separation.available_stems
+          } : null)
+          
+          if (finalSeparationData) {
+            setSeparationData(finalSeparationData)
           }
           
           // Set analysis data (everything except separation)
           const { separation, ...analysisResults } = data
           setAnalysisData(analysisResults)
+          
+          // Clean up
+          window.pendingSeparationData = null
           
           setIsAnalyzing(false)
           setProgress(0)
@@ -157,16 +175,20 @@ function App() {
 
   const handleReset = async () => {
     // Clean up separation session if it exists
-    if (separationData?.session_id) {
+    const sessionToCleanup = separationData?.session_id || window.pendingSeparationData?.session_id
+    if (sessionToCleanup) {
       try {
         const baseUrl = (import.meta.env.VITE_API_URL || 'https://rizwankuwait--perc-analysis-backend-v3-fastapi-app.modal.run').replace(/\/$/, '')
-        await fetch(`${baseUrl}/api/cleanup/${separationData.session_id}`, {
+        await fetch(`${baseUrl}/api/cleanup/${sessionToCleanup}`, {
           method: 'POST'
         })
       } catch (error) {
         console.warn('Failed to cleanup session:', error)
       }
     }
+    
+    // Clean up pending data
+    window.pendingSeparationData = null
     
     // Reset all state
     setAnalysisData(null)
