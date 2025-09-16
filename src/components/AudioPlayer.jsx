@@ -346,11 +346,36 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
-  const downloadTrack = (trackType) => {
-    const link = document.createElement('a')
-    link.href = tracks[trackType]
-    link.download = `${originalFileName}_${trackType}.wav`
-    link.click()
+  const downloadTrack = async (trackType) => {
+    try {
+      console.log(`Downloading ${trackType} track...`)
+      
+      // Fetch the audio file as a blob to force download
+      const response = await fetch(tracks[trackType])
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${trackType} track`)
+      }
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      
+      // Create download link
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${originalFileName}_${trackType}.mp3`
+      document.body.appendChild(link) // Required for Firefox
+      link.click()
+      
+      // Clean up
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      console.log(`${trackType} track downloaded successfully`)
+    } catch (error) {
+      console.error(`Failed to download ${trackType} track:`, error)
+      // Fallback to direct link if blob download fails
+      window.open(tracks[trackType], '_blank')
+    }
   }
 
   return (
