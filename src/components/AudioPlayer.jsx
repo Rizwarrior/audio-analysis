@@ -58,11 +58,6 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
             if (currentAudio) {
               console.log(`${trackType} metadata loaded, duration: ${currentAudio.duration}`)
               
-              // Force volume refresh after metadata loads
-              const targetVolume = mutedTracks[trackType] ? 0 : volumes[trackType]
-              currentAudio.volume = targetVolume
-              console.log(`${trackType} volume refreshed to: ${targetVolume}`)
-              
               if (trackType === primaryTrack) {
                 setDuration(currentAudio.duration)
               }
@@ -127,10 +122,9 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
             setDuration(audio.duration)
           }
           
-          // Set initial volume for each track
-          const targetVolume = mutedTracks[trackType] ? 0 : volumes[trackType]
-          audio.volume = targetVolume
-          console.log(`${trackType} volume set to: ${targetVolume} (muted: ${mutedTracks[trackType]})`)
+          // Set initial volume for each track  
+          audio.volume = volumes[trackType]
+          console.log(`${trackType} initial volume set to: ${volumes[trackType]}`)
           
           // Log audio element status
           console.log(`${trackType} audio setup:`, {
@@ -166,7 +160,7 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
         }
       })
     }
-  }, [tracks, volumes, mutedTracks])
+  }, [tracks]) // Only re-setup when tracks change, not volume/mute states
 
   const togglePlayPause = async () => {
     const newIsPlaying = !isPlaying
