@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { Play, Pause, Download, Volume2, VolumeX, RotateCcw, Repeat } from 'lucide-react'
 import './AudioPlayer.css'
 
-function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed = false }) {
+function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed = false, preloadedUrls = [] }) {
   // Log the tracks URLs for debugging
   console.log('AudioPlayer received tracks:', tracks)
+  console.log('Preloaded tracks:', preloadedUrls)
   
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -439,7 +440,9 @@ function AudioPlayer({ tracks, originalFileName, onAnalyzeDrums, drumsAnalyzed =
                 <h3 style={{ color: trackInfo[trackType].color }}>
                   {trackInfo[trackType].name}
                   {loadingStates[trackType] && (
-                    <span className="loading-badge">⏳ Loading...</span>
+                    <span className="loading-badge">
+                      ⏳ {preloadedUrls.includes(trackType) ? 'Finalizing...' : 'Loading...'}
+                    </span>
                   )}
                   {trackType === 'drums' && drumsAnalyzed && (
                     <span className="analyzed-badge">✓ Analyzed</span>

@@ -101,16 +101,33 @@ function App() {
     }
     
     // Create hidden audio elements to start preloading
+    const preloadedAudio = {}
     Object.entries(separationData.tracks).forEach(([trackType, trackUrl]) => {
       const audio = new Audio()
       audio.preload = 'auto'
       audio.src = trackUrl
+      audio.crossOrigin = 'anonymous'
+      
+      // Add progress tracking
+      audio.addEventListener('progress', () => {
+        if (audio.buffered.length > 0) {
+          const buffered = audio.buffered.end(0) / audio.duration * 100
+          console.log(`${trackType} buffered: ${buffered.toFixed(1)}%`)
+        }
+      })
+      
+      audio.addEventListener('canplaythrough', () => {
+        console.log(`${trackType} fully loaded`)
+      })
+      
       audio.load() // Start loading immediately
+      preloadedAudio[trackType] = audio
       console.log(`Preloading ${trackType} track: ${trackUrl}`)
     })
     
-    // Store for later use but don't display yet
+    // Store both data and preloaded audio elements
     window.pendingSeparationData = tempSeparationData
+    window.preloadedAudioElements = preloadedAudio
     
     // Update progress to show separation is done
     setProgress(60) // Separation is typically 60% of the work
@@ -163,6 +180,7 @@ function App() {
           
           // Clean up
           window.pendingSeparationData = null
+          window.preloadedAudioElements = null
           
           setIsAnalyzing(false)
           setProgress(0)
@@ -189,6 +207,7 @@ function App() {
     
     // Clean up pending data
     window.pendingSeparationData = null
+    window.preloadedAudioElements = null
     
     // Reset all state
     setAnalysisData(null)
@@ -242,6 +261,7 @@ function App() {
               originalFileName="separated_track"
               onAnalyzeDrums={handleAnalyzeDrums}
               drumsAnalyzed={!!analysisData}
+              preloadedUrls={window.preloadedAudioElements ? Object.keys(window.preloadedAudioElements) : []}
             />
           </div>
         )}
