@@ -89,10 +89,35 @@ function App() {
     window.analysisProgressInterval = progressInterval
   }
 
+  const handleSeparationComplete = (separationData) => {
+    console.log('Separation complete, starting audio preload:', separationData)
+    
+    // Immediately show separated tracks and start preloading
+    setSeparationData({
+      tracks: separationData.tracks,
+      session_id: separationData.session_id,
+      available_stems: separationData.available_stems
+    })
+    
+    // Update progress to show separation is done
+    setProgress(60) // Separation is typically 60% of the work
+    setProgressText('Separation complete! Starting audio preload and drum analysis...')
+    setCurrentPhase('analysis')
+  }
+
   const handleAnalysisComplete = (data) => {
     // Clear the progress interval
     if (window.analysisProgressInterval) {
       clearInterval(window.analysisProgressInterval)
+    }
+    
+    if (!data) {
+      // Handle error case
+      setIsAnalyzing(false)
+      setProgress(0)
+      setProgressText('')
+      setCurrentPhase('upload')
+      return
     }
     
     // Smoothly complete the progress bar from current position to 100%
@@ -108,8 +133,8 @@ function App() {
         
         // Show results after a brief pause
         setTimeout(() => {
-          // Split the data into separation and analysis parts
-          if (data.separation) {
+          // If separation data isn't already set, set it from combined data
+          if (data.separation && !separationData) {
             setSeparationData({
               tracks: data.separation.tracks,
               session_id: data.separation.session_id,
@@ -134,7 +159,7 @@ function App() {
     // Clean up separation session if it exists
     if (separationData?.session_id) {
       try {
-        const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+        const baseUrl = (import.meta.env.VITE_API_URL || 'https://rizwankuwait--perc-analysis-backend-v3-fastapi-app.modal.run').replace(/\/$/, '')
         await fetch(`${baseUrl}/api/cleanup/${separationData.session_id}`, {
           method: 'POST'
         })
@@ -176,6 +201,7 @@ function App() {
       <main className="main">
         <FileUpload 
           onAnalysisStart={handleAnalysisStart}
+          onSeparationComplete={handleSeparationComplete}
           onAnalysisComplete={handleAnalysisComplete}
           isAnalyzing={isAnalyzing}
           resetTrigger={resetTrigger}

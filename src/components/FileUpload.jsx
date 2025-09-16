@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import './FileUpload.css'
 
-function FileUpload({ onAnalysisStart, onAnalysisComplete, isAnalyzing, resetTrigger }) {
+function FileUpload({ onAnalysisStart, onAnalysisComplete, onSeparationComplete, isAnalyzing, resetTrigger }) {
   const [dragActive, setDragActive] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
   const fileInputRef = useRef(null)
@@ -60,21 +60,49 @@ function FileUpload({ onAnalysisStart, onAnalysisComplete, isAnalyzing, resetTri
     
     const formData = new FormData()
     formData.append('audio', selectedFile)
+    const baseUrl = (import.meta.env.VITE_API_URL || 'https://rizwankuwait--perc-analysis-backend-v3-fastapi-app.modal.run').replace(/\/$/, '')
 
     try {
-      const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-      const response = await axios.post(`${baseUrl}/api/analyze`, formData, {
+      // Stage 1: Separate audio and get track URLs immediately
+      console.log('Stage 1: Starting separation...')
+      const separationResponse = await axios.post(`${baseUrl}/api/separate`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
         timeout: 300000, // 5 minute timeout for large files
         onUploadProgress: (progressEvent) => {
-          // This will help with the initial upload phase
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           console.log(`Upload progress: ${percentCompleted}%`)
         }
       })
-      onAnalysisComplete(response.data)
+      
+      const separationData = separationResponse.data
+      console.log('Stage 1 complete: Separation data received', separationData)
+      
+      // Immediately provide track URLs to start preloading
+      if (onSeparationComplete) {
+        onSeparationComplete(separationData)
+      }
+      
+      // Stage 2: Analyze drums in background while tracks preload
+      console.log('Stage 2: Starting drum analysis...')
+      const analysisResponse = await axios.post(`${baseUrl}/api/analyze/${separationData.session_id}`, {}, {
+        timeout: 300000, // 5 minute timeout for analysis
+      })
+      
+      console.log('Stage 2 complete: Analysis data received', analysisResponse.data)
+      
+      // Combine separation and analysis data
+      const combinedData = {
+        ...analysisResponse.data,
+        separation: {
+          session_id: separationData.session_id,
+          tracks: separationData.tracks,
+          available_stems: separationData.available_stems
+        }
+      }
+      
+      onAnalysisComplete(combinedData)
     } catch (error) {
       console.error('Analysis failed:', error)
       const errorMessage = error.response?.data?.detail || error.message || 'Analysis failed'
