@@ -11,7 +11,8 @@ function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [progressText, setProgressText] = useState('')
-  const [currentPhase, setCurrentPhase] = useState('upload') // 'upload', 'separation', 'analysis'
+  const [currentPhase, setCurrentPhase] = useState('upload')
+ // 'upload', 'separation', 'analysis'
   const [resetTrigger, setResetTrigger] = useState(0)
 
   const handleAnalysisStart = () => {
@@ -90,7 +91,7 @@ function App() {
   }
 
   const handleSeparationComplete = (separationData) => {
-    console.log('Separation complete, preloading audio tracks:', separationData)
+    console.log('Separation complete, starting parallel track preloading:', separationData)
     
     // Store separation data but DON'T show the player yet
     // Just start preloading the audio tracks in the background
@@ -100,29 +101,63 @@ function App() {
       available_stems: separationData.available_stems
     }
     
-    // Create hidden audio elements to start preloading
+    // Start parallel preloading of all tracks simultaneously
     const preloadedAudio = {}
+    const trackLoadingPromises = []
+    
     Object.entries(separationData.tracks).forEach(([trackType, trackUrl]) => {
       const audio = new Audio()
       audio.preload = 'auto'
       audio.src = trackUrl
       audio.crossOrigin = 'anonymous'
       
-      // Add progress tracking
-      audio.addEventListener('progress', () => {
-        if (audio.buffered.length > 0) {
-          const buffered = audio.buffered.end(0) / audio.duration * 100
-          console.log(`${trackType} buffered: ${buffered.toFixed(1)}%`)
-        }
+      // Create a promise that resolves when track is ready
+      const loadPromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error(`${trackType} track loading timeout`))
+        }, 60000) // 60 second timeout per track
+        
+        audio.addEventListener('canplaythrough', () => {
+          clearTimeout(timeout)
+          console.log(`✅ ${trackType} fully loaded and ready to play`)
+          resolve(trackType)
+        })
+        
+        audio.addEventListener('error', (e) => {
+          clearTimeout(timeout)
+          console.error(`❌ ${trackType} loading failed:`, e)
+          reject(new Error(`${trackType} loading failed`))
+        })
+        
+        // Track loading progress for console logging
+        audio.addEventListener('progress', () => {
+          if (audio.buffered.length > 0 && audio.duration > 0) {
+            const buffered = Math.min(100, (audio.buffered.end(0) / audio.duration) * 100)
+            console.log(`📊 ${trackType} buffered: ${buffered.toFixed(1)}%`)
+          }
+        })
       })
       
-      audio.addEventListener('canplaythrough', () => {
-        console.log(`${trackType} fully loaded`)
-      })
-      
-      audio.load() // Start loading immediately
+      // Start loading immediately - this triggers parallel downloads
+      audio.load()
       preloadedAudio[trackType] = audio
-      console.log(`Preloading ${trackType} track: ${trackUrl}`)
+      trackLoadingPromises.push(loadPromise)
+      console.log(`🚀 Starting parallel download for ${trackType}: ${trackUrl}`)
+    })
+    
+    // Monitor overall loading progress
+    Promise.allSettled(trackLoadingPromises).then((results) => {
+      const successful = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      console.log(`📈 Parallel loading complete: ${successful} successful, ${failed} failed`)
+      
+      if (failed > 0) {
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.warn(`Track loading failed:`, result.reason)
+          }
+        })
+      }
     })
     
     // Store both data and preloaded audio elements
@@ -209,7 +244,7 @@ function App() {
     window.pendingSeparationData = null
     window.preloadedAudioElements = null
     
-    // Reset all state
+    // Reset all state including track loading progress
     setAnalysisData(null)
     setSeparationData(null)
     setIsAnalyzing(false)
@@ -250,7 +285,10 @@ function App() {
         
         {isAnalyzing && (
           <div className="analysis-section">
-            <ProgressBar progress={progress} text={progressText} />
+            <ProgressBar 
+              progress={progress} 
+              text={progressText} 
+            />
           </div>
         )}
         
