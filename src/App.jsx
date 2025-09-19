@@ -23,68 +23,37 @@ function App() {
     setCurrentPhase('upload')
     setProgressText('Starting analysis...')
     
-    // More realistic progress simulation for combined workflow
+    // Smooth animated progress from 0-50% during separation phase
     let currentProgress = 0
-    let phase = 'upload'
-    let phaseStartTime = Date.now()
     
     const progressInterval = setInterval(() => {
-      if (currentProgress < 95 && isAnalyzing) {
-        const elapsed = Date.now() - phaseStartTime
+      if (currentProgress < 50) {
+        // Smooth continuous animation from 0-50%
+        const increment = 0.12 + Math.random() * 0.15 // 0.12-0.27% per 80ms
+        currentProgress = Math.min(50, currentProgress + increment)
         
-        // Different phases with different speeds and durations
-        if (phase === 'upload' && elapsed > 1000) {
-          // Upload phase: 0-10% in ~1 second
-          const increment = Math.random() * 2 + 1
-          currentProgress = Math.min(10, currentProgress + increment)
+        // Update text based on progress ranges
+        if (currentProgress < 8) {
           setProgressText('Uploading audio file...')
-          
-          if (currentProgress >= 10) {
-            phase = 'separation'
-            phaseStartTime = Date.now()
-            setCurrentPhase('separation')
-          }
-        } else if (phase === 'separation') {
-          // Demucs separation: 10-60% - main processing time
-          const increment = Math.random() * 0.8 + 0.3
-          currentProgress = Math.min(60, currentProgress + increment)
+          setCurrentPhase('upload')
+        } else if (currentProgress < 20) {
+          setProgressText('Preparing audio for separation...')
+          setCurrentPhase('separation')
+        } else if (currentProgress < 35) {
           setProgressText('Separating audio into stems...')
-          
-          if (currentProgress >= 60) {
-            phase = 'loading'
-            phaseStartTime = Date.now()
-            setCurrentPhase('analysis')
-          }
-        } else if (phase === 'loading' && elapsed > 1000) {
-          // Model loading: 60-70% in ~1 second
-          const increment = Math.random() * 1.5 + 0.5
-          currentProgress = Math.min(70, currentProgress + increment)
-          setProgressText('Loading percussion analysis model...')
-          
-          if (currentProgress >= 70) {
-            phase = 'transcription'
-            phaseStartTime = Date.now()
-          }
-        } else if (phase === 'transcription') {
-          // Drum transcription: 70-85% - AI processing
-          const increment = Math.random() * 0.6 + 0.2
-          currentProgress = Math.min(85, currentProgress + increment)
-          setProgressText('Analyzing drum patterns...')
-          
-          if (currentProgress >= 85) {
-            phase = 'visualization'
-            phaseStartTime = Date.now()
-          }
-        } else if (phase === 'visualization') {
-          // Visualization: 85-95% - final steps
-          const increment = Math.random() * 0.4 + 0.1
-          currentProgress = Math.min(95, currentProgress + increment)
-          setProgressText('Generating visualization...')
+        } else {
+          setProgressText('Finalizing audio separation...')
         }
         
         setProgress(currentProgress)
+      } else {
+        // Stop at 50% and wait for separation to complete
+        setProgress(50)
+        setProgressText('Audio separation completing...')
+        clearInterval(progressInterval)
+        window.analysisProgressInterval = null
       }
-    }, 150)
+    }, 80) // Update every 80ms for very smooth animation
     
     // Store interval ID to clear it later
     window.analysisProgressInterval = progressInterval
@@ -164,16 +133,50 @@ function App() {
     window.pendingSeparationData = tempSeparationData
     window.preloadedAudioElements = preloadedAudio
     
-    // Update progress to show separation is done
-    setProgress(60) // Separation is typically 60% of the work
-    setProgressText('Tracks are preloading while analyzing drums...')
+    // Start second phase of animation (50-100%) for track loading + drum analysis
+    setProgress(50)
+    setProgressText('Tracks preloading while analyzing drums...')
     setCurrentPhase('analysis')
+    
+    // Start second animation phase from 50% to 100%
+    let currentProgress = 50
+    const secondPhaseInterval = setInterval(() => {
+      if (currentProgress < 95) {
+        // Slower animation for analysis phase
+        const increment = 0.08 + Math.random() * 0.12 // 0.08-0.20% per 100ms
+        currentProgress = Math.min(95, currentProgress + increment)
+        
+        // Update text based on progress ranges
+        if (currentProgress < 65) {
+          setProgressText('Loading audio tracks in parallel...')
+        } else if (currentProgress < 80) {
+          setProgressText('Analyzing drum patterns with AI...')
+        } else {
+          setProgressText('Generating percussion timestamps...')
+        }
+        
+        setProgress(currentProgress)
+      } else {
+        // Stop at 95% and wait for actual completion
+        setProgress(95)
+        setProgressText('Finalizing analysis...')
+        clearInterval(secondPhaseInterval)
+        window.secondPhaseProgressInterval = secondPhaseInterval
+      }
+    }, 100) // Update every 100ms
+    
+    window.secondPhaseProgressInterval = secondPhaseInterval
   }
 
   const handleAnalysisComplete = (data) => {
-    // Clear the progress interval
+    // Clear both progress intervals
     if (window.analysisProgressInterval) {
       clearInterval(window.analysisProgressInterval)
+      window.analysisProgressInterval = null
+    }
+    if (window.secondPhaseProgressInterval) {
+      clearInterval(window.secondPhaseProgressInterval)
+      window.secondPhaseProgressInterval = null
     }
     
     if (!data) {
@@ -258,6 +261,11 @@ function App() {
     // Clear any running intervals
     if (window.analysisProgressInterval) {
       clearInterval(window.analysisProgressInterval)
+      window.analysisProgressInterval = null
+    }
+    if (window.secondPhaseProgressInterval) {
+      clearInterval(window.secondPhaseProgressInterval)
+      window.secondPhaseProgressInterval = null
     }
   }
 
