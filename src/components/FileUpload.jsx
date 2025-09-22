@@ -69,7 +69,7 @@ function FileUpload({ onAnalysisStart, onAnalysisComplete, onSeparationComplete,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 300000, // 5 minute timeout for large files
+        timeout: 600000, // 10 minute timeout for large files
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           console.log(`Upload progress: ${percentCompleted}%`)
@@ -87,7 +87,7 @@ function FileUpload({ onAnalysisStart, onAnalysisComplete, onSeparationComplete,
       // Stage 2: Analyze drums in background while tracks preload
       console.log('Stage 2: Starting drum analysis...')
       const analysisResponse = await axios.post(`${baseUrl}/api/analyze/${separationData.session_id}`, {}, {
-        timeout: 300000, // 5 minute timeout for analysis
+        timeout: 1000000, // 16+ minute timeout for analysis (allows for 15min Magenta + buffer)
       })
       
       console.log('Stage 2 complete: Analysis data received', analysisResponse.data)

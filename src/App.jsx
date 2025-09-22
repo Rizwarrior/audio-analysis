@@ -84,7 +84,7 @@ function App() {
       const loadPromise = new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error(`${trackType} track loading timeout`))
-        }, 60000) // 60 second timeout per track
+        }, 120000) // 2 minute timeout per track (more generous for large files)
         
         audio.addEventListener('canplaythrough', () => {
           clearTimeout(timeout)
